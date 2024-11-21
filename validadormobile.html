@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validador de Ingressos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        video {
+            width: 300px;
+            height: auto;
+            border: 1px solid #ccc;
+            margin: 10px auto;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .message {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Validador de Ingressos</h1>
+    <video id="preview"></video>
+    <button onclick="ativarCamera()">Ativar Câmera</button>
+    <div class="message" id="mensagem"></div>
+    <table>
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Código</th>
+                <th>Horário</th>
+            </tr>
+        </thead>
+        <tbody id="registros"></tbody>
+    </table>
+
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script>
+        const codigosValidos = [
+"001-ALMOÇO-BPFN0M-UUX9",
+"002-ALMOÇO-M2FJ3C-JINF",
+"003-ALMOÇO-FXF80U-YULL",
+"004-ALMOÇO-422ZSR-5SAX",
+"005-ALMOÇO-UM15OV-LF8P",
+"006-ALMOÇO-9VAIN3-3XRQ",
+"007-ALMOÇO-JLK8I9-REST",
+"008-ALMOÇO-CHYXW7-1J6V",
+"009-ALMOÇO-3JYGQT-N1UE",
+"010-ALMOÇO-4A0GA7-I5M7",
+"011-ALMOÇO-VKWBZ5-TDIM",
+"012-ALMOÇO-7A6INT-3S2Z",
+"013-ALMOÇO-UO39SQ-3HP8",
+"014-ALMOÇO-NDV22G-OAMB",
+"015-ALMOÇO-NUMN5B-3GOA",
+"016-ALMOÇO-VX7SQF-R81N",
+"017-ALMOÇO-1TQ30P-5NSN",
+"018-ALMOÇO-9NMWST-CYXA",
+"019-ALMOÇO-J73NUW-2PWQ",
+"020-ALMOÇO-7VFZ5K-9DTG",
+"021-ALMOÇO-2IKJ8X-E2OM",
+"022-ALMOÇO-D2QX6R-BP3B",
+"023-ALMOÇO-M47X0Y-1B6I",
+"024-ALMOÇO-70VNSJ-VBCL",
+"025-ALMOÇO-5WCC7C-HVB0",
+"026-ALMOÇO-C7QFPC-0AUL",
+"027-ALMOÇO-MUSYX7-GY3Q",
+"028-ALMOÇO-D520QP-JNQY",
+"029-ALMOÇO-FJPZOP-3KBO",
+"030-ALMOÇO-MZ4UOX-0PTE",
+"031-ALMOÇO-JWQU3B-NM1P",
+"032-ALMOÇO-GWSIG3-4XWT",
+"033-ALMOÇO-TP0TV3-YTYU",
+"034-ALMOÇO-E0ISBJ-GPQN",
+"035-ALMOÇO-A52JOG-0NNW",
+"036-ALMOÇO-4A3USX-ZX5X",
+"037-ALMOÇO-ON1PF5-LKVR",
+"038-ALMOÇO-LSKIEI-HIAR",
+"039-ALMOÇO-LYDNYI-WPTC",
+"040-ALMOÇO-0YKVC0-PZ8H",
+"041-ALMOÇO-NWABY9-YO4P",
+"042-ALMOÇO-7QF95D-00F8",
+"043-ALMOÇO-4ISMB5-BDK8",
+"044-ALMOÇO-E2S6H7-OZ2O",
+"045-ALMOÇO-S9TV5Q-O4J2",
+"046-ALMOÇO-OPT2IO-7GV6",
+"047-ALMOÇO-DP1Q1B-PWTJ",
+"048-ALMOÇO-XIRP57-I0BW",
+"049-ALMOÇO-3MW8IG-UX4J",
+"050-ALMOÇO-50607V-Z29E",
+"051-ALMOÇO-EB1DT9-KWTJ",
+"052-ALMOÇO-Y5TR7Q-NDVD",
+"053-ALMOÇO-SXZR77-HSOQ",
+"054-ALMOÇO-UFK0QN-S8TI",
+"055-ALMOÇO-ETZ67V-36OI",
+"056-ALMOÇO-GEKGIR-VN88",
+"057-ALMOÇO-HTZHPN-GFZ0",
+"058-ALMOÇO-8LY8KY-57BR",
+"059-ALMOÇO-PYAI2F-JESJ",
+"060-ALMOÇO-JUN988-0W8C",
+"061-ALMOÇO-VSQ5WV-W1HZ",
+"062-ALMOÇO-5W1OON-540A",
+"063-ALMOÇO-PGSYZE-M4K0",
+"064-ALMOÇO-LO6PDD-FBV9",
+"065-ALMOÇO-ZO3CUC-2G51",
+"066-ALMOÇO-7QKWR1-DIGJ",
+"067-ALMOÇO-KLNXOC-YLMU",
+"068-ALMOÇO-GID48V-O17T",
+"069-ALMOÇO-SOJ69B-WOCS",
+"070-ALMOÇO-MW31K6-H0W2",
+"071-ALMOÇO-X57KF7-6JZF",
+"072-ALMOÇO-5IWCMW-0XOK",
+"073-ALMOÇO-RC4QGU-AZAV",
+"074-ALMOÇO-6SCFMF-NFYO",
+"075-ALMOÇO-Y0IW38-BG2R",
+"076-ALMOÇO-MG915V-LC1K",
+"077-ALMOÇO-EUOT6R-J8D9",
+"078-ALMOÇO-HL7UQO-NPDW",
+"079-ALMOÇO-PFVYNX-G788",
+"080-ALMOÇO-GWMISO-LGHG",
+"081-ALMOÇO-VJNO0Y-4WIG",
+"082-ALMOÇO-JAZUU7-WFUY",
+"083-ALMOÇO-D4SI4B-TS42",
+"084-ALMOÇO-VCH7H6-PG50",
+"085-ALMOÇO-515XKI-8QOX",
+"086-ALMOÇO-SATLL5-EHF3",
+"087-ALMOÇO-0V65P5-TTRR",
+"088-ALMOÇO-ALK9RB-8RTV",
+"089-ALMOÇO-5C8LG6-YQTH",
+"090-ALMOÇO-M1G8M0-NSEO",
+"091-ALMOÇO-L4FRJW-SSLX",
+"092-ALMOÇO-OC87KS-QPD0",
+"093-ALMOÇO-AU1RGU-E0EF",
+"094-ALMOÇO-LMNCRP-TKAJ",
+"095-ALMOÇO-KZRIR3-E498",
+"096-ALMOÇO-6M98K7-GGWM",
+"097-ALMOÇO-RVM0NV-MG7Z",
+"098-ALMOÇO-DPNIKD-SYTK",
+"099-ALMOÇO-ZP4TM5-V7QC",
+"100-ALMOÇO-PSXU3H-E01B",
+"101-ALMOÇO-AZCZFY-LK6P",
+"102-ALMOÇO-SSJQ7M-2595",
+"103-ALMOÇO-RXCS7M-AVG1",
+"104-ALMOÇO-167I34-X9WW",
+"105-ALMOÇO-J5J52G-GQXV",
+"106-ALMOÇO-LH3DMB-0VGL",
+"107-ALMOÇO-9DWG3F-7AFK",
+"108-ALMOÇO-E4WDC0-QTKP",
+"109-ALMOÇO-58SI7M-3AAB",
+"110-ALMOÇO-Q7XIFU-9XY3",
+"111-ALMOÇO-1T3XE9-IZ3L",
+"112-ALMOÇO-ASLWR2-KI5E",
+"113-ALMOÇO-V47918-E53I",
+"114-ALMOÇO-CZJOTJ-RY93",
+"115-ALMOÇO-Z3MCGL-BNIF",
+"116-ALMOÇO-K1QM5X-JTY5",
+"117-ALMOÇO-3R1PZ8-AHWV",
+"118-ALMOÇO-GC93WV-9YZ6",
+"119-ALMOÇO-6JHMKO-ELZG",
+"120-ALMOÇO-SLZYZ8-JZN1",
+"121-ALMOÇO-Y4CXJY-13UQ",
+"122-ALMOÇO-43KNAE-SCFO",
+"123-ALMOÇO-RB5QQP-BUZ6",
+"124-ALMOÇO-LYMCHG-69OS",
+"125-ALMOÇO-EVHBFW-E7VA",
+"126-ALMOÇO-E9BLF1-CRSV",
+"127-ALMOÇO-JI9RNJ-0T1P",
+"128-ALMOÇO-19A92O-0G6U",
+"129-ALMOÇO-USDWJ3-I1EE",
+"130-ALMOÇO-15BIRM-VU3A",
+"131-ALMOÇO-JX4FEE-9OCI",
+"132-ALMOÇO-SV1MG5-L2IU",
+"133-ALMOÇO-7SHFNG-D2NV",
+"134-ALMOÇO-2C026T-6EU1",
+"135-ALMOÇO-AQKYUI-IRFT",
+"136-ALMOÇO-UFUE89-23K7",
+"137-ALMOÇO-P5A3NL-LAV4",
+"138-ALMOÇO-1KM1PU-0P4F",
+"139-ALMOÇO-D6L7YP-4B5U",
+"140-ALMOÇO-6XC7S1-8L62",
+"141-ALMOÇO-17DMOP-JUSF",
+"142-ALMOÇO-35PVZE-BRQV",
+"143-ALMOÇO-UHOZCE-5E5H",
+"144-ALMOÇO-OQ97XS-VDH3",
+"145-ALMOÇO-WPUZ5D-07MW",
+"146-ALMOÇO-YY4SDR-97OA",
+"147-ALMOÇO-YDIM1F-YNH1",
+"148-ALMOÇO-A2EQFU-J4DD",
+"149-ALMOÇO-FARVEO-9ILA",
+"150-ALMOÇO-N59I4U-4I22",
+"151-ALMOÇO-AUQIS9-YTRP",
+"152-ALMOÇO-0HLCB2-4T7V",
+"153-ALMOÇO-CSLVDC-LOP3",
+"154-ALMOÇO-HMGF9W-XYGI",
+"155-ALMOÇO-YCZXS2-DGLZ",
+"156-ALMOÇO-ZU2ZGJ-NME2",
+"157-ALMOÇO-5QSKYA-NDKE",
+"158-ALMOÇO-IOOF8I-ZDRO",
+"159-ALMOÇO-TULF7D-W72L",
+"160-ALMOÇO-N5CVTP-C4OI",
+"161-ALMOÇO-HF41HI-0T0S",
+"162-ALMOÇO-LY8A17-RUJQ",
+"163-ALMOÇO-NOBB1F-A2SC",
+"164-ALMOÇO-DOWUV7-6YKM",
+"165-ALMOÇO-HL0OKI-VP1Y",
+"166-ALMOÇO-VF5BQ7-0HDA",
+"167-ALMOÇO-0D43T9-BSDK",
+"168-ALMOÇO-78XZGH-LCAC",
+"169-ALMOÇO-ER8A2T-JVPO",
+"170-ALMOÇO-9YRB8F-R6NL",
+"171-ALMOÇO-J7P5L1-HU5E",
+"172-ALMOÇO-UTJ2XS-GFIH",
+"173-ALMOÇO-PXT3EQ-KBX1",
+"174-ALMOÇO-4D1J1P-NSO4",
+"175-ALMOÇO-LA6WI7-LZ0K",
+"176-ALMOÇO-FMWA22-IC2M",
+"177-ALMOÇO-TORR66-IY4R",
+"178-ALMOÇO-UGK8EF-5GC9",
+"179-ALMOÇO-8GO8VR-CZU6",
+"180-ALMOÇO-TO50U8-Q94Q",
+"181-ALMOÇO-AN1JZP-26Z4",
+"182-ALMOÇO-SCWMOX-6BR6",
+"183-ALMOÇO-ODR9NN-92JY",
+"184-ALMOÇO-ZQQ36P-LTJS",
+"185-ALMOÇO-8572MS-6W7L",
+"186-ALMOÇO-8PW425-QMY5",
+"187-ALMOÇO-9OE9C1-Y0EU",
+"188-ALMOÇO-CK030T-HSWT",
+"189-ALMOÇO-NY70EH-033J",
+"190-ALMOÇO-6ZS19R-5A3W",
+"191-ALMOÇO-W8EAFT-FRBK",
+"192-ALMOÇO-2ZZ6JU-75G9",
+"193-ALMOÇO-FK7RNS-A3ZZ",
+"194-ALMOÇO-S09FAB-E3J9",
+"195-ALMOÇO-JZ5BBG-4GEE",
+"196-ALMOÇO-RNTMY7-9DWE",
+"197-ALMOÇO-4N6OCB-RUPF",
+"198-ALMOÇO-63G0H6-IOX7",
+"199-ALMOÇO-E5MK55-OCL3",
+"200-ALMOÇO-7TT9OA-DZED",
+"201-ALMOÇO-55JES9-XC4H",
+"202-ALMOÇO-F37A66-Y7SE",
+"203-ALMOÇO-ITPTZX-KEAQ",
+"204-ALMOÇO-5FUJTV-JU2Z",
+"205-ALMOÇO-WIWSF2-SKSV",
+"206-ALMOÇO-V0T92D-SB09",
+"207-ALMOÇO-UC6XNL-AD7Q",
+"208-ALMOÇO-7BH0X1-J7EG",
+"209-ALMOÇO-J84ZW2-XITS",
+"210-ALMOÇO-7BZLDO-DSL2",
+"211-ALMOÇO-7PL37W-MHFM",
+"212-ALMOÇO-NM9NO2-8Q9W",
+"213-ALMOÇO-LOT6IC-FG6P",
+"214-ALMOÇO-TY2PGI-I6MW",
+"215-ALMOÇO-FWKJ8D-LD8Y",
+"216-ALMOÇO-GGGEKR-0PH1",
+"217-ALMOÇO-3KTSR9-YVZU",
+"218-ALMOÇO-FY4M9M-J6UR",
+"219-ALMOÇO-S89C12-ESB6",
+"220-ALMOÇO-NF972L-P8Z4",
+"221-ALMOÇO-WQZCZV-UJ04",
+"222-ALMOÇO-RCWA8F-2MWA",
+"223-ALMOÇO-P74DAT-RJ3F",
+"224-ALMOÇO-LJXCCC-SYFZ",
+"225-ALMOÇO-AGEKIZ-O6WZ",
+"226-ALMOÇO-54DTKU-SWQM",
+"227-ALMOÇO-5E8YO8-0ZFY",
+"228-ALMOÇO-5FK8RK-ULBB",
+"229-ALMOÇO-2ENY9J-6YH9",
+"230-ALMOÇO-1GS0RR-425S",
+"231-ALMOÇO-06WPYU-AIB1",
+"232-ALMOÇO-ZW29WZ-BYAY",
+"233-ALMOÇO-7UB9O1-U203",
+"234-ALMOÇO-RGUL0Q-0CPI",
+"235-ALMOÇO-0CSACU-CADB",
+"236-ALMOÇO-AI7Z03-UHO0",
+"237-ALMOÇO-NOFUA8-JL3W",
+"238-ALMOÇO-L885TF-NYXH",
+"239-ALMOÇO-3HPCQK-Z5UZ",
+"240-ALMOÇO-TGL40F-J72G",
+"241-ALMOÇO-K7OX5M-XGN1",
+"242-ALMOÇO-MIV50M-WC1T",
+"243-ALMOÇO-E4G9U4-4MPI",
+"244-ALMOÇO-T21ZA2-0B14",
+"245-ALMOÇO-905ZHB-PUFF",
+"246-ALMOÇO-SIM9UA-C7GB",
+"247-ALMOÇO-DWQ7SF-CDUW",
+"248-ALMOÇO-WRLGK3-4CS2",
+"249-ALMOÇO-CH44G3-A7AP",
+"250-ALMOÇO-7SW6XA-M5QN",
+         ];
+
+        const usados = [];
+        const registros = [];
+
+        function ativarCamera() {
+            const html5QrCode = new Html5Qrcode("preview");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                qrCodeMessage => validarCodigo(qrCodeMessage)
+            ).catch(err => {
+                alert("Erro ao acessar a câmera: " + err);
+            });
+        }
+
+        function validarCodigo(codigo) {
+            const mensagem = document.getElementById("mensagem");
+            const tabela = document.getElementById("registros");
+
+            if (usados.includes(codigo)) {
+                mensagem.style.color = "red";
+                mensagem.textContent = "Este ingresso já foi usado!";
+            } else if (codigosValidos.includes(codigo)) {
+                usados.push(codigo);
+                const horario = new Date().toLocaleString();
+                registros.push({ codigo, horario });
+
+                const linha = document.createElement("tr");
+                linha.innerHTML = `<td>${codigo.split('-')[0]}</td><td>${codigo}</td><td>${horario}</td>`;
+                tabela.appendChild(linha);
+
+                mensagem.style.color = "green";
+                mensagem.textContent = "Ingresso válido!";
+            } else {
+                mensagem.style.color = "red";
+                mensagem.textContent = "Ingresso inválido!";
+            }
+        }
+    </script>
+</body>
+</html>
