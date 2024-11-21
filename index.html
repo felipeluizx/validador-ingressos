@@ -50,6 +50,8 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"></script>
 </head>
 <body>
     <h1>Validador de Ingressos</h1>
@@ -62,12 +64,27 @@
                 <th>Número</th>
                 <th>Código</th>
                 <th>Horário</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody id="registros"></tbody>
     </table>
+    <button onclick="limparTudo()">Limpar Todos os Códigos</button>
 
     <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "", // Não é necessário em Test Mode
+            authDomain: "validador-ingressos.firebaseapp.com",
+            databaseURL: "https://validador-ingressos-default-rtdb.firebaseio.com/",
+            projectId: "validador-ingressos",
+            storageBucket: "validador-ingressos.appspot.com",
+            messagingSenderId: "",
+            appId: ""
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         const codigosValidos = [
 "001-ALMOÇO-BPFN0M-UUX9",
 "002-ALMOÇO-M2FJ3C-JINF",
@@ -320,102 +337,63 @@
 "249-ALMOÇO-CH44G3-A7AP",
 "250-ALMOÇO-7SW6XA-M5QN",
          
-      ];
+     ];
 
-        let usados = JSON.parse(localStorage.getItem("usados")) || [];
-        let registros = JSON.parse(localStorage.getItem("registros")) || [];
-        let ultimaLeitura = ""; // Armazena o último código lido
-        let debounceTimeout = null; // Controle de tempo para debounce
-
-        function salvarDados() {
-            localStorage.setItem("usados", JSON.stringify(usados));
-            localStorage.setItem("registros", JSON.stringify(registros));
-        }
-
-        function carregarDados() {
+        function sincronizarDados() {
             const tabela = document.getElementById("registros");
-            registros.forEach(({ codigo, horario }) => {
-                const linha = document.createElement("tr");
-                linha.innerHTML = `<td>${codigo.split('-')[0]}</td><td>${codigo}</td><td>${horario}</td>`;
-                tabela.appendChild(linha);
+            firebase.database().ref('validados').on('value', (snapshot) => {
+                tabela.innerHTML = ''; // Limpar tabela antes de sincronizar
+                snapshot.forEach((childSnapshot) => {
+                    const codigo = childSnapshot.key;
+                    const horario = childSnapshot.val();
+                    adicionarLinha(codigo, horario);
+                });
             });
         }
 
         function validarCodigo(codigo) {
-            const mensagem = document.getElementById("mensagem");
-            const tabela = document.getElementById("registros");
-
-            // Ignorar leituras duplicadas dentro do tempo de debounce
-            if (codigo === ultimaLeitura) return;
-
-            ultimaLeitura = codigo;
-
-            if (usados.includes(codigo)) {
-                mensagem.style.color = "red";
-                mensagem.textContent = "Este ingresso já foi usado!";
-            } else if (codigosValidos.includes(codigo)) {
-                usados.push(codigo);
+            if (codigosValidos.includes(codigo)) {
                 const horario = new Date().toLocaleString();
-                registros.push({ codigo, horario });
-                salvarDados();
-
-                const linha = document.createElement("tr");
-                linha.innerHTML = `<td>${codigo.split('-')[0]}</td><td>${codigo}</td><td>${horario}</td>`;
-                tabela.appendChild(linha);
-
-                mensagem.style.color = "green";
-                mensagem.textContent = "Ingresso válido! Bem-vindo!";
+                firebase.database().ref(`validados/${codigo}`).set(horario);
+                alert("Ingresso válido!");
             } else {
-                mensagem.style.color = "red";
-                mensagem.textContent = "Ingresso inválido!";
+                alert("Ingresso inválido!");
             }
-
-            // Limpar o último código após 5 segundos (tempo de debounce)
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => {
-                ultimaLeitura = "";
-            }, 5000);
         }
 
-        function ativarCamera() {
-            const video = document.getElementById("video");
-            const canvas = document.getElementById("canvas");
-            const context = canvas.getContext("2d");
-
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then((stream) => {
-                    video.srcObject = stream;
-                    video.play();
-
-                    // Processar o vídeo continuamente
-                    const processarVideo = () => {
-                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                            canvas.width = video.videoWidth;
-                            canvas.height = video.videoHeight;
-                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                            const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
-
-                            if (qrCode) {
-                                validarCodigo(qrCode.data);
-                            }
-                        }
-                        requestAnimationFrame(processarVideo);
-                    };
-
-                    processarVideo();
-                })
-                .catch((err) => {
-                    alert("Erro ao acessar a câmera: " + err);
-                });
+        function adicionarLinha(codigo, horario) {
+            const tabela = document.getElementById("registros");
+            const linha = document.createElement("tr");
+            linha.innerHTML = `
+                <td>${codigo.split('-')[0]}</td>
+                <td>${codigo}</td>
+                <td>${horario}</td>
+                <td><button onclick="removerCodigo('${codigo}')">Remover</button></td>
+            `;
+            tabela.appendChild(linha);
         }
 
-        // Ativar a câmera ao carregar a página
-        window.onload = function () {
-            carregarDados();
-            ativarCamera();
-        };
+        function removerCodigo(codigo) {
+            const senha = prompt("Digite a senha para remover este código:");
+            if (senha === "ripas") {
+                firebase.database().ref(`validados/${codigo}`).remove();
+                alert("Código removido!");
+            } else {
+                alert("Senha incorreta!");
+            }
+        }
+
+        function limparTudo() {
+            const senha = prompt("Digite a senha para limpar todos os códigos:");
+            if (senha === "ripas") {
+                firebase.database().ref('validados').remove();
+                alert("Todos os códigos foram limpos!");
+            } else {
+                alert("Senha incorreta!");
+            }
+        }
+
+        window.onload = () => sincronizarDados();
     </script>
 </body>
 </html>
