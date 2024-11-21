@@ -97,6 +97,7 @@
         const database = firebase.database();
 
         const codigosValidos = [
+         
 "001-ALMOÇO-BPFN0M-UUX9",
 "002-ALMOÇO-M2FJ3C-JINF",
 "003-ALMOÇO-FXF80U-YULL",
@@ -348,7 +349,7 @@
 "249-ALMOÇO-CH44G3-A7AP",
 "250-ALMOÇO-7SW6XA-M5QN",
          
-     ];
+    ];
 
         let modoApagar = false;
 
@@ -390,36 +391,6 @@
             tabela.appendChild(linha);
         }
 
-        function removerCodigo(codigo) {
-            const senha = prompt("Digite a senha para remover este código:");
-            if (senha === "ripas") {
-                firebase.database().ref(`validados/${codigo}`).remove();
-                alert("Código removido!");
-            } else {
-                alert("Senha incorreta!");
-            }
-        }
-
-        function limparTudo() {
-            const senha = prompt("Digite a senha para limpar todos os códigos:");
-            if (senha === "ripas") {
-                firebase.database().ref('validados').remove();
-                alert("Todos os códigos foram limpos!");
-            } else {
-                alert("Senha incorreta!");
-            }
-        }
-
-        function abrirApagarCodigo() {
-            document.getElementById("botao-principal").classList.add("hidden");
-            document.getElementById("opcoes-apagar").classList.remove("hidden");
-        }
-
-        function lerCodigoParaApagar() {
-            modoApagar = true;
-            lerCodigo();
-        }
-
         function lerCodigo() {
             const video = document.getElementById("video");
             const canvas = document.getElementById("canvas");
@@ -429,9 +400,7 @@
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
                 .then((stream) => {
                     video.srcObject = stream;
-                    video.play();
 
-                    // Processar o vídeo continuamente
                     const processarVideo = () => {
                         if (video.readyState === video.HAVE_ENOUGH_DATA) {
                             canvas.width = video.videoWidth;
@@ -443,9 +412,8 @@
 
                             if (qrCode) {
                                 validarCodigo(qrCode.data);
-                                video.srcObject.getTracks().forEach(track => track.stop());
+                                video.srcObject.getTracks().forEach((track) => track.stop());
                                 video.classList.add("hidden");
-                                modoApagar = false; // Resetar o modo de apagar
                             }
                         }
                         requestAnimationFrame(processarVideo);
