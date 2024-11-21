@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Validador de Ingressos Mobile</title>
+    <title>Validador de Ingressos</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             padding: 20px;
+        }
+        canvas {
+            display: none;
         }
         video {
             width: 300px;
@@ -46,14 +49,12 @@
             background-color: #f2f2f2;
         }
     </style>
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 </head>
 <body>
     <h1>Validador de Ingressos</h1>
-    <div>
-        <button onclick="ativarCamera()">Ativar Câmera</button>
-        <div id="camera-preview"></div>
-    </div>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
     <div class="message" id="mensagem"></div>
     <table>
         <thead>
@@ -66,7 +67,8 @@
         <tbody id="registros"></tbody>
     </table>
 
-    <script>
+  <script>
+        const codigosValidos = [
 "001-ALMOÇO-BPFN0M-UUX9",
 "002-ALMOÇO-M2FJ3C-JINF",
 "003-ALMOÇO-FXF80U-YULL",
@@ -317,10 +319,7 @@
 "248-ALMOÇO-WRLGK3-4CS2",
 "249-ALMOÇO-CH44G3-A7AP",
 "250-ALMOÇO-7SW6XA-M5QN",
-         ,
-            "004-ALMOÇO-422ZSR-5SAX",
-            "005-ALMOÇO-UM15OV-LF8P",
-            "250-ALMOÇO-7SW6XA-M5QN"
+         
         ];
 
         let usados = JSON.parse(localStorage.getItem("usados")) || [];
@@ -366,25 +365,44 @@
         }
 
         function ativarCamera() {
-            const previewDiv = document.getElementById("camera-preview");
-            const html5QrCode = new Html5Qrcode("camera-preview");
+            const video = document.getElementById("video");
+            const canvas = document.getElementById("canvas");
+            const context = canvas.getContext("2d");
 
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
-                (decodedText) => {
-                    validarCodigo(decodedText);
-                },
-                (errorMessage) => {
-                    console.log("Erro ao ler o QR Code: ", errorMessage);
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then((stream) => {
+                    video.srcObject = stream;
+                    processarVideo();
+                })
+                .catch((err) => {
+                    alert("Erro ao acessar a câmera: " + err);
+                });
+
+            function processarVideo() {
+                const largura = video.videoWidth;
+                const altura = video.videoHeight;
+
+                canvas.width = largura;
+                canvas.height = altura;
+
+                context.drawImage(video, 0, 0, largura, altura);
+
+                const imageData = context.getImageData(0, 0, largura, altura);
+                const qrCode = jsQR(imageData.data, largura, altura);
+
+                if (qrCode) {
+                    validarCodigo(qrCode.data);
                 }
-            ).catch(err => {
-                alert("Erro ao acessar a câmera: " + err);
-            });
+
+                requestAnimationFrame(processarVideo);
+            }
         }
 
-        // Carregar dados ao abrir a página
-        window.onload = carregarDados;
+        // Ativar a câmera ao carregar a página
+        window.onload = function () {
+            carregarDados();
+            ativarCamera();
+        };
     </script>
 </body>
 </html>
