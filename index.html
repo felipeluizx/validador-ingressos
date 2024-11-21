@@ -49,26 +49,12 @@
         th {
             background-color: #f2f2f2;
         }
-        .hidden {
-            display: none;
-        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"></script>
 </head>
 <body>
     <h1>Validador de Ingressos</h1>
-    <div id="botao-principal">
-        <button onclick="lerCodigo()">Ler Código</button>
-        <button onclick="abrirApagarCodigo()">Apagar Código</button>
-    </div>
-    <div id="opcoes-apagar" class="hidden">
-        <button onclick="limparTudo()">Limpar Todos os Códigos</button>
-        <button onclick="lerCodigoParaApagar()">Ler Código para Apagar</button>
-        <button onclick="voltar()">Voltar</button>
-    </div>
-    <video id="video" autoplay playsinline class="hidden"></video>
+    <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
     <div class="message" id="mensagem"></div>
     <table>
@@ -81,21 +67,11 @@
         </thead>
         <tbody id="registros"></tbody>
     </table>
+    <button onclick="lerCodigo()">Ler Código</button>
+    <button onclick="limparRegistros()">Limpar Todos os Registros</button>
 
     <script>
-        // Configuração do Firebase
-        const firebaseConfig = {
-            apiKey: "", // Não necessário no Test Mode
-            authDomain: "validador-ingressos.firebaseapp.com",
-            databaseURL: "https://validador-ingressos-default-rtdb.firebaseio.com/",
-            projectId: "validador-ingressos",
-            storageBucket: "validador-ingressos.appspot.com",
-            messagingSenderId: "",
-            appId: ""
-        };
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
+        // Lista de códigos válidos
         const codigosValidos = [
          
 "001-ALMOÇO-BPFN0M-UUX9",
@@ -349,39 +325,23 @@
 "249-ALMOÇO-CH44G3-A7AP",
 "250-ALMOÇO-7SW6XA-M5QN",
          
-    ];
+  
+        ];
 
-        let modoApagar = false;
+        // Lista de códigos já validados
+        let registros = [];
 
-        function sincronizarDados() {
-            const tabela = document.getElementById("registros");
-            firebase.database().ref('validados').on('value', (snapshot) => {
-                tabela.innerHTML = ''; // Limpar tabela antes de sincronizar
-                snapshot.forEach((childSnapshot) => {
-                    const codigo = childSnapshot.key;
-                    const horario = childSnapshot.val();
-                    adicionarLinha(codigo, horario);
-                });
-            });
+        function exibirMensagem(mensagem, cor) {
+            const mensagemDiv = document.getElementById("mensagem");
+            mensagemDiv.textContent = mensagem;
+            mensagemDiv.style.color = cor;
         }
 
-        function validarCodigo(codigo) {
-            if (modoApagar) {
-                removerCodigo(codigo);
-                return;
-            }
-
-            if (codigosValidos.includes(codigo)) {
-                const horario = new Date().toLocaleString();
-                firebase.database().ref(`validados/${codigo}`).set(horario);
-                alert("Ingresso válido!");
-            } else {
-                alert("Ingresso inválido!");
-            }
-        }
-
-        function adicionarLinha(codigo, horario) {
+        function adicionarRegistro(codigo) {
             const tabela = document.getElementById("registros");
+            const horario = new Date().toLocaleString();
+
+            // Adicionar registro na tabela
             const linha = document.createElement("tr");
             linha.innerHTML = `
                 <td>${codigo.split('-')[0]}</td>
@@ -389,17 +349,43 @@
                 <td>${horario}</td>
             `;
             tabela.appendChild(linha);
+
+            // Adicionar registro na lista local
+            registros.push({ codigo, horario });
+        }
+
+        function limparRegistros() {
+            if (confirm("Tem certeza de que deseja limpar todos os registros?")) {
+                registros = [];
+                document.getElementById("registros").innerHTML = "";
+                exibirMensagem("Todos os registros foram limpos.", "blue");
+            }
+        }
+
+        function validarCodigo(codigo) {
+            if (registros.find((registro) => registro.codigo === codigo)) {
+                exibirMensagem("Este ingresso já foi usado!", "red");
+                return;
+            }
+
+            if (codigosValidos.includes(codigo)) {
+                exibirMensagem("Ingresso válido!", "green");
+                adicionarRegistro(codigo);
+            } else {
+                exibirMensagem("Ingresso inválido!", "red");
+            }
         }
 
         function lerCodigo() {
             const video = document.getElementById("video");
             const canvas = document.getElementById("canvas");
             const context = canvas.getContext("2d");
-            video.classList.remove("hidden");
 
+            // Ativar a câmera
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
                 .then((stream) => {
                     video.srcObject = stream;
+                    video.play();
 
                     const processarVideo = () => {
                         if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -412,10 +398,12 @@
 
                             if (qrCode) {
                                 validarCodigo(qrCode.data);
+
+                                // Parar a câmera após leitura
                                 video.srcObject.getTracks().forEach((track) => track.stop());
-                                video.classList.add("hidden");
                             }
                         }
+
                         requestAnimationFrame(processarVideo);
                     };
 
@@ -425,13 +413,6 @@
                     alert("Erro ao acessar a câmera: " + err);
                 });
         }
-
-        function voltar() {
-            document.getElementById("botao-principal").classList.remove("hidden");
-            document.getElementById("opcoes-apagar").classList.add("hidden");
-        }
-
-        window.onload = () => sincronizarDados();
     </script>
 </body>
 </html>
