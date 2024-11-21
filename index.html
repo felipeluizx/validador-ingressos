@@ -68,7 +68,7 @@
     </table>
 
     <script>
-         const codigosValidos = [
+        const codigosValidos = [
 "001-ALMOÇO-BPFN0M-UUX9",
 "002-ALMOÇO-M2FJ3C-JINF",
 "003-ALMOÇO-FXF80U-YULL",
@@ -320,11 +320,12 @@
 "249-ALMOÇO-CH44G3-A7AP",
 "250-ALMOÇO-7SW6XA-M5QN",
          
-      
-        ];
+      ];
 
         let usados = JSON.parse(localStorage.getItem("usados")) || [];
         let registros = JSON.parse(localStorage.getItem("registros")) || [];
+        let ultimaLeitura = ""; // Armazena o último código lido
+        let debounceTimeout = null; // Controle de tempo para debounce
 
         function salvarDados() {
             localStorage.setItem("usados", JSON.stringify(usados));
@@ -343,6 +344,11 @@
         function validarCodigo(codigo) {
             const mensagem = document.getElementById("mensagem");
             const tabela = document.getElementById("registros");
+
+            // Ignorar leituras duplicadas dentro do tempo de debounce
+            if (codigo === ultimaLeitura) return;
+
+            ultimaLeitura = codigo;
 
             if (usados.includes(codigo)) {
                 mensagem.style.color = "red";
@@ -363,6 +369,12 @@
                 mensagem.style.color = "red";
                 mensagem.textContent = "Ingresso inválido!";
             }
+
+            // Limpar o último código após 5 segundos (tempo de debounce)
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                ultimaLeitura = "";
+            }, 5000);
         }
 
         function ativarCamera() {
