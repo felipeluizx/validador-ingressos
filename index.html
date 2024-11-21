@@ -26,6 +26,7 @@
             color: white;
             border: none;
             cursor: pointer;
+            margin: 5px;
         }
         button:hover {
             background-color: #45a049;
@@ -48,6 +49,9 @@
         th {
             background-color: #f2f2f2;
         }
+        .hidden {
+            display: none;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
@@ -55,7 +59,16 @@
 </head>
 <body>
     <h1>Validador de Ingressos</h1>
-    <video id="video" autoplay playsinline></video>
+    <div id="botao-principal">
+        <button onclick="lerCodigo()">Ler Código</button>
+        <button onclick="abrirApagarCodigo()">Apagar Código</button>
+    </div>
+    <div id="opcoes-apagar" class="hidden">
+        <button onclick="limparTudo()">Limpar Todos os Códigos</button>
+        <button onclick="lerCodigoParaApagar()">Ler Código para Apagar</button>
+        <button onclick="voltar()">Voltar</button>
+    </div>
+    <video id="video" autoplay playsinline class="hidden"></video>
     <canvas id="canvas"></canvas>
     <div class="message" id="mensagem"></div>
     <table>
@@ -64,17 +77,15 @@
                 <th>Número</th>
                 <th>Código</th>
                 <th>Horário</th>
-                <th>Ações</th>
             </tr>
         </thead>
         <tbody id="registros"></tbody>
     </table>
-    <button onclick="limparTudo()">Limpar Todos os Códigos</button>
 
     <script>
         // Configuração do Firebase
         const firebaseConfig = {
-            apiKey: "", // Não é necessário em Test Mode
+            apiKey: "", // Não necessário no Test Mode
             authDomain: "validador-ingressos.firebaseapp.com",
             databaseURL: "https://validador-ingressos-default-rtdb.firebaseio.com/",
             projectId: "validador-ingressos",
@@ -339,6 +350,8 @@
          
      ];
 
+        let modoApagar = false;
+
         function sincronizarDados() {
             const tabela = document.getElementById("registros");
             firebase.database().ref('validados').on('value', (snapshot) => {
@@ -352,6 +365,11 @@
         }
 
         function validarCodigo(codigo) {
+            if (modoApagar) {
+                removerCodigo(codigo);
+                return;
+            }
+
             if (codigosValidos.includes(codigo)) {
                 const horario = new Date().toLocaleString();
                 firebase.database().ref(`validados/${codigo}`).set(horario);
@@ -368,7 +386,6 @@
                 <td>${codigo.split('-')[0]}</td>
                 <td>${codigo}</td>
                 <td>${horario}</td>
-                <td><button onclick="removerCodigo('${codigo}')">Remover</button></td>
             `;
             tabela.appendChild(linha);
         }
@@ -391,6 +408,59 @@
             } else {
                 alert("Senha incorreta!");
             }
+        }
+
+        function abrirApagarCodigo() {
+            document.getElementById("botao-principal").classList.add("hidden");
+            document.getElementById("opcoes-apagar").classList.remove("hidden");
+        }
+
+        function lerCodigoParaApagar() {
+            modoApagar = true;
+            lerCodigo();
+        }
+
+        function lerCodigo() {
+            const video = document.getElementById("video");
+            const canvas = document.getElementById("canvas");
+            const context = canvas.getContext("2d");
+            video.classList.remove("hidden");
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then((stream) => {
+                    video.srcObject = stream;
+                    video.play();
+
+                    // Processar o vídeo continuamente
+                    const processarVideo = () => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+                            if (qrCode) {
+                                validarCodigo(qrCode.data);
+                                video.srcObject.getTracks().forEach(track => track.stop());
+                                video.classList.add("hidden");
+                                modoApagar = false; // Resetar o modo de apagar
+                            }
+                        }
+                        requestAnimationFrame(processarVideo);
+                    };
+
+                    processarVideo();
+                })
+                .catch((err) => {
+                    alert("Erro ao acessar a câmera: " + err);
+                });
+        }
+
+        function voltar() {
+            document.getElementById("botao-principal").classList.remove("hidden");
+            document.getElementById("opcoes-apagar").classList.add("hidden");
         }
 
         window.onload = () => sincronizarDados();
