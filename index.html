@@ -24,17 +24,36 @@
             border: none;
             cursor: pointer;
         }
+        button:hover {
+            background-color: #45a049;
+        }
         .message {
             margin-top: 20px;
             font-size: 18px;
             font-weight: bold;
         }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
     </style>
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
     <h1>Validador de Ingressos</h1>
-    <video id="preview"></video>
-    <button onclick="ativarCamera()">Ativar Câmera</button>
+    <div>
+        <button onclick="ativarCamera()">Ativar Câmera</button>
+        <div id="camera-preview"></div>
+    </div>
     <div class="message" id="mensagem"></div>
     <table>
         <thead>
@@ -47,9 +66,7 @@
         <tbody id="registros"></tbody>
     </table>
 
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
     <script>
-        const codigosValidos = [
 "001-ALMOÇO-BPFN0M-UUX9",
 "002-ALMOÇO-M2FJ3C-JINF",
 "003-ALMOÇO-FXF80U-YULL",
@@ -300,19 +317,26 @@
 "248-ALMOÇO-WRLGK3-4CS2",
 "249-ALMOÇO-CH44G3-A7AP",
 "250-ALMOÇO-7SW6XA-M5QN",
-         ];
+         ,
+            "004-ALMOÇO-422ZSR-5SAX",
+            "005-ALMOÇO-UM15OV-LF8P",
+            "250-ALMOÇO-7SW6XA-M5QN"
+        ];
 
-        const usados = [];
-        const registros = [];
+        let usados = JSON.parse(localStorage.getItem("usados")) || [];
+        let registros = JSON.parse(localStorage.getItem("registros")) || [];
 
-        function ativarCamera() {
-            const html5QrCode = new Html5Qrcode("preview");
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
-                qrCodeMessage => validarCodigo(qrCodeMessage)
-            ).catch(err => {
-                alert("Erro ao acessar a câmera: " + err);
+        function salvarDados() {
+            localStorage.setItem("usados", JSON.stringify(usados));
+            localStorage.setItem("registros", JSON.stringify(registros));
+        }
+
+        function carregarDados() {
+            const tabela = document.getElementById("registros");
+            registros.forEach(({ codigo, horario }) => {
+                const linha = document.createElement("tr");
+                linha.innerHTML = `<td>${codigo.split('-')[0]}</td><td>${codigo}</td><td>${horario}</td>`;
+                tabela.appendChild(linha);
             });
         }
 
@@ -327,18 +351,40 @@
                 usados.push(codigo);
                 const horario = new Date().toLocaleString();
                 registros.push({ codigo, horario });
+                salvarDados();
 
                 const linha = document.createElement("tr");
                 linha.innerHTML = `<td>${codigo.split('-')[0]}</td><td>${codigo}</td><td>${horario}</td>`;
                 tabela.appendChild(linha);
 
                 mensagem.style.color = "green";
-                mensagem.textContent = "Ingresso válido!";
+                mensagem.textContent = "Ingresso válido! Bem-vindo!";
             } else {
                 mensagem.style.color = "red";
                 mensagem.textContent = "Ingresso inválido!";
             }
         }
+
+        function ativarCamera() {
+            const previewDiv = document.getElementById("camera-preview");
+            const html5QrCode = new Html5Qrcode("camera-preview");
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    validarCodigo(decodedText);
+                },
+                (errorMessage) => {
+                    console.log("Erro ao ler o QR Code: ", errorMessage);
+                }
+            ).catch(err => {
+                alert("Erro ao acessar a câmera: " + err);
+            });
+        }
+
+        // Carregar dados ao abrir a página
+        window.onload = carregarDados;
     </script>
 </body>
 </html>
