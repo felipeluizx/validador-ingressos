@@ -10,14 +10,14 @@
             text-align: center;
             padding: 20px;
         }
-        canvas {
-            display: none;
-        }
         video {
             width: 300px;
             height: auto;
             border: 1px solid #ccc;
             margin: 10px auto;
+        }
+        canvas {
+            display: none;
         }
         button {
             padding: 10px 20px;
@@ -53,7 +53,7 @@
 </head>
 <body>
     <h1>Validador de Ingressos</h1>
-    <video id="video" autoplay></video>
+    <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
     <div class="message" id="mensagem"></div>
     <table>
@@ -67,8 +67,8 @@
         <tbody id="registros"></tbody>
     </table>
 
-  <script>
-        const codigosValidos = [
+    <script>
+         const codigosValidos = [
 "001-ALMOÇO-BPFN0M-UUX9",
 "002-ALMOÇO-M2FJ3C-JINF",
 "003-ALMOÇO-FXF80U-YULL",
@@ -320,6 +320,7 @@
 "249-ALMOÇO-CH44G3-A7AP",
 "250-ALMOÇO-7SW6XA-M5QN",
          
+      
         ];
 
         let usados = JSON.parse(localStorage.getItem("usados")) || [];
@@ -372,30 +373,30 @@
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
                 .then((stream) => {
                     video.srcObject = stream;
+                    video.play();
+
+                    // Processar o vídeo continuamente
+                    const processarVideo = () => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+                            if (qrCode) {
+                                validarCodigo(qrCode.data);
+                            }
+                        }
+                        requestAnimationFrame(processarVideo);
+                    };
+
                     processarVideo();
                 })
                 .catch((err) => {
                     alert("Erro ao acessar a câmera: " + err);
                 });
-
-            function processarVideo() {
-                const largura = video.videoWidth;
-                const altura = video.videoHeight;
-
-                canvas.width = largura;
-                canvas.height = altura;
-
-                context.drawImage(video, 0, 0, largura, altura);
-
-                const imageData = context.getImageData(0, 0, largura, altura);
-                const qrCode = jsQR(imageData.data, largura, altura);
-
-                if (qrCode) {
-                    validarCodigo(qrCode.data);
-                }
-
-                requestAnimationFrame(processarVideo);
-            }
         }
 
         // Ativar a câmera ao carregar a página
